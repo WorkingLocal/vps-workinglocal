@@ -37,7 +37,7 @@ Coolify (poort 8000 — intern via SSH tunnel bereikbaar)
 | Focus App | `focus-app` | focus.workinglocal.be | Live |
 | Xibo CMS | `xibo-cms` + `xibo-db` | signage.workinglocal.be | Live |
 | Netdata | `netdata` | metrics.workinglocal.be | Live |
-| Odoo CE | `odoo` + `odoo-db` | odoo.workinglocal.be | Te deployen |
+| Odoo CE | `odoo` + `odoo-db` | odoo.workinglocal.be | Live |
 
 ## Repositories
 
