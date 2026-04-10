@@ -51,6 +51,7 @@ Coolify (poort 8000 — bereikbaar via SSH tunnel)
 
 ## Documentatie
 
-- [docs/architecture.md](docs/architecture.md) — volledige serverarchitectuur
+- [docs/new-server-deployment.md](docs/new-server-deployment.md) — **volledig stappenplan voor nieuwe klantuitrol**
+- [docs/architecture.md](docs/architecture.md) — serverarchitectuur en stack overzicht
 - [docs/dns.md](docs/dns.md) — DNS instellingen per service
-- [docs/reinstallation-guide.md](docs/reinstallation-guide.md) — herinstallatie stappenplan
+- [docs/reinstallation-guide.md](docs/reinstallation-guide.md) — herinstallatie op bestaande Working Local VPS
