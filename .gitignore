@@ -1,3 +1,7 @@
+# Klantconfigs — bevatten wachtwoorden, nooit committen
+customers/
+
+# Env bestanden
 .env
 *.env
 !*.env.template
