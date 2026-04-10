@@ -21,7 +21,7 @@ Caddy (reverse proxy + automatisch SSL)  ← beheerd door Coolify
     │
     ├── focus.workinglocal.be    → Focus App container (:3000)
     ├── signage.workinglocal.be  → Xibo CMS container (:80)
-    └── monitor.workinglocal.be  → Netdata container (:19999)
+    └── metrics.workinglocal.be  → Netdata container (:19999)
 
 Coolify
     → beheert alle containers + deploys via GitHub webhooks
@@ -33,6 +33,7 @@ Coolify
 |---|---|
 | [focus-workinglocal](https://github.com/WorkingLocal/focus-workinglocal) | Focus Kiosk app (Node.js) |
 | [signage-workinglocal](https://github.com/WorkingLocal/signage-workinglocal) | Xibo CMS configuratie |
+| [metrics-workinglocal](https://github.com/WorkingLocal/metrics-workinglocal) | Netdata monitoring configuratie |
 | [vps-workinglocal](https://github.com/WorkingLocal/vps-workinglocal) | Server setup & infra docs |
 
 ## Firewall (UFW)
@@ -44,3 +45,4 @@ Coolify
 | 443 | HTTPS (Caddy) |
 | 8000 | Coolify dashboard (alleen lokaal via SSH tunnel) |
 | 9505 | Xibo XMR push (direct, geen Cloudflare proxy) |
+| 19999 | Netdata (intern, via Coolify/Caddy naar buiten) |
