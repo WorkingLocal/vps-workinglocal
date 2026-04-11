@@ -35,6 +35,16 @@ bash setup/configure-firewall.sh
 
 ---
 
+## Stap 3b — Security hardening
+
+```bash
+bash setup/harden-server.sh
+```
+
+Installeert Fail2ban, blokkeert Docker UFW bypass, hardenat SSH.
+
+---
+
 ## Stap 4 — Coolify installeren
 
 ```bash

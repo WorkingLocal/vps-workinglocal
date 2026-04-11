@@ -81,11 +81,29 @@ bash setup/configure-firewall.sh
 ```
 
 Dit opent poorten 22 (SSH), 80 (HTTP), 443 (HTTPS), 9505 (Xibo XMR).
-Poort 8000 (Coolify) blijft gesloten voor publieke toegang.
+Poorten 8000, 8080, 19999, 6001, 6002 worden expliciet geblokkeerd.
 
 > **Verificatie:**
 > ```bash
 > ufw status verbose
+> ```
+
+### 2.4 — Security hardening
+
+```bash
+bash setup/harden-server.sh
+```
+
+Dit script voert automatisch uit:
+- **Fail2ban** installeren — blokkeert IP's na herhaalde mislukte SSH pogingen
+- **SSH** hardening — wachtwoord-login uit, root enkel via key (`prohibit-password`)
+- **Docker UFW bypass** blokkeren — Docker omzeilt anders de firewall voor intern-only poorten
+- **PM2** uitschakelen — overblijfsel van pre-Docker setup
+
+> **Verificatie:**
+> ```bash
+> fail2ban-client status sshd
+> grep -E 'PasswordAuthentication|PermitRootLogin' /etc/ssh/sshd_config
 > ```
 
 ---

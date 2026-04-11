@@ -60,8 +60,20 @@ Coolify (poort 8000 — intern via SSH tunnel bereikbaar)
 | 9505 | Xibo XMR push | Direct, geen Cloudflare proxy |
 | 19999 | Netdata | Intern, via Coolify/Caddy naar buiten |
 
+## Security
+
+| Maatregel | Status |
+|---|---|
+| UFW firewall | Actief — enkel 22, 80, 443, 9505 open |
+| Docker UFW bypass | Geblokkeerd via `iptables: false` in daemon.json |
+| SSH wachtwoord-login | Uitgeschakeld (`PasswordAuthentication no`) |
+| SSH root login | Enkel via key (`PermitRootLogin prohibit-password`) |
+| Fail2ban | Actief — SSH brute force, ban na 3 pogingen / 24u |
+| Unattended upgrades | Actief — automatische security patches |
+
 ## Notities
 
 - Native Caddy (`/etc/caddy/Caddyfile`) gestopt en uitgeschakeld — vervangen door `coolify-proxy`
 - Focus App migratie van PM2 naar Docker container voltooid op 2026-04-10
-- Tijdzone ingesteld op `Europe/Brussels` op 2026-04-10
+- PM2 uitgeschakeld op 2026-04-11 (geen processen meer)
+- Security hardening uitgevoerd op 2026-04-11
