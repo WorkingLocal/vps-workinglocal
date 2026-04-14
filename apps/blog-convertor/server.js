@@ -410,16 +410,18 @@ input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(2
       <div>
         <label class="settings-label" for="img-backend-select">Afbeeldingen genereren via</label>
         <select id="img-backend-select" class="settings-select" onchange="onBackendChange()">
-          <option value="local">Lokaal (SDXL — traag)</option>
+          <option value="local">Lokaal (CPU — traag)</option>
           <option value="replicate">Replicate API (snel)</option>
         </select>
       </div>
       <div>
         <label class="settings-label" for="img-model-select">Beeldgeneratie model</label>
         <select id="img-model-select" class="settings-select">
-          <option value="sdxl">Stable Diffusion XL</option>
-          <option value="flux-schnell">Flux.1 Schnell</option>
-          <option value="flux-dev">Flux.1 Dev</option>
+          <option value="sdxl">Stable Diffusion XL (lokaal)</option>
+          <option value="sdxl-turbo">SDXL Turbo — sneller (lokaal)</option>
+          <option value="sd15">Stable Diffusion 1.5 — kleinste (lokaal)</option>
+          <option value="flux-schnell" class="replicate-only">Flux.1 Schnell (Replicate)</option>
+          <option value="flux-dev" class="replicate-only">Flux.1 Dev (Replicate)</option>
         </select>
       </div>
     </div>
@@ -657,6 +659,7 @@ async function pollSystem(){
 }
 
 function onBackendChange(){
+  // Flux-opties zijn alleen beschikbaar via Replicate
   const v=document.getElementById('img-backend-select').value;
   const row=document.getElementById('replicate-row');
   const modelSel=document.getElementById('img-model-select');
@@ -664,7 +667,7 @@ function onBackendChange(){
   // Flux only available on Replicate
   const fluxOpts=modelSel.querySelectorAll('option[value^="flux"]');
   fluxOpts.forEach(o=>o.disabled=(v==='local'));
-  if(v==='local') modelSel.value='sdxl';
+  if(v==='local' && modelSel.value.startsWith('flux')) modelSel.value='sdxl';
 }
 onBackendChange();
 
