@@ -49,7 +49,7 @@ Coolify (https://coolify.workinglocal.be)
 
 ## Services
 
-| Service | Container | Poort intern | Repo |
+| Service | Container / Proces | Poort intern | Repo |
 |---|---|---|---|
 | Coolify | `coolify` | 8080 | — |
 | Odoo CE | `odoo` + `odoo-db` | 8069 | odoo-workinglocal |
@@ -58,6 +58,69 @@ Coolify (https://coolify.workinglocal.be)
 | Focus App | `focus-app` | 3000 | focus-workinglocal |
 | WordPress | `wordpress` + `db` | 80 | wordpress-workinglocal |
 | Urbackup | `urbackup` | 55414 | backup-workinglocal |
+| **Blog Convertor** | systemd `blog-ui` (Node.js) | **3456** | vps-workinglocal `apps/blog-convertor/` |
+
+## Blog Convertor
+
+De Blog Convertor is een interne webapplicatie voor het automatisch herschrijven van Engelstalige blogartikelen naar Nederlands en het publiceren als concept in WordPress.
+
+### Architectuur
+
+```
+Browser
+  └─► http://VPS:3456   (Blog Convertor UI)
+        └─► Node.js server (systemd service blog-ui)
+              ├─► n8n webhook (docker intern: 172.18.0.3:5678)
+              ├─► LiteLLM /models (Tailscale: 100.80.180.55:4000) — modellijst ophalen
+              └─► Stats Service (Tailscale: 100.80.180.55:11435) — RAM/CPU visualisatie
+```
+
+### Bestandslocaties op VPS
+
+| Bestand | Pad |
+|---|---|
+| Server script | `/opt/blog-ui/server.js` |
+| Logo (wit) | `/opt/blog-ui/logo-white.png` |
+| Systemd service | `/etc/systemd/system/blog-ui.service` |
+
+### Beheer
+
+```bash
+# Status
+systemctl status blog-ui
+
+# Logs (live)
+journalctl -u blog-ui -f
+
+# Herstarten na update
+cp server.js /opt/blog-ui/server.js
+systemctl restart blog-ui
+```
+
+### Configuratie (constanten in server.js)
+
+| Constante | Waarde | Omschrijving |
+|---|---|---|
+| `PORT` | `3456` | Luisterpoort webapplicatie |
+| `N8N_HOST` | `172.18.0.3` | Interne Docker IP van n8n container |
+| `N8N_PORT` | `5678` | n8n poort |
+| `WORKFLOW_ID` | `kTy9n74V2kWvLMMM` | n8n workflow ID |
+| `DB_CONTAINER` | `n8n-db-qmj...` | PostgreSQL container naam |
+| `LITELLM_URL` | `http://100.80.180.55:4000` | LiteLLM via Tailscale |
+| `LITELLM_KEY` | `HostingLocal2024` | LiteLLM master key |
+
+### Afhankelijkheden (AI Engine)
+
+De Blog Convertor communiceert via Tailscale met de AI Engine op `100.80.180.55`:
+
+| Service | Poort | Gebruik |
+|---|---|---|
+| Ollama | 11434 | Modellen downloaden/beheren |
+| LiteLLM | 4000 | OpenAI-compatibele proxy naar Ollama |
+| Stats Service | 11435 | RAM/CPU visualisatie in UI |
+| Image Gen Service | 11436 | Afbeeldingen genereren (SDXL / Replicate) |
+
+---
 
 ## Firewall (UFW)
 

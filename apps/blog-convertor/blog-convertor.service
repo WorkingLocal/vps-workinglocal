@@ -1,0 +1,18 @@
+[Unit]
+Description=Blog Convertor — Working Local
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/blog-ui
+ExecStart=/usr/bin/node /opt/blog-ui/server.js
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=blog-convertor
+
+[Install]
+WantedBy=multi-user.target

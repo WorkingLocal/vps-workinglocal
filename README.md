@@ -16,7 +16,7 @@ Server setup, infrastructuur en documentatie voor VPS-WORKINGLOCAL.
 
 ## Services
 
-| Service | Domein | Repo |
+| Service | Domein / Poort | Repo |
 |---|---|---|
 | Coolify | coolify.workinglocal.be | — |
 | Focus Kiosk app | focus.workinglocal.be | [focus-workinglocal](https://github.com/WorkingLocal/focus-workinglocal) |
@@ -25,11 +25,17 @@ Server setup, infrastructuur en documentatie voor VPS-WORKINGLOCAL.
 | Odoo CE | odoo.workinglocal.be | [odoo-workinglocal](https://github.com/WorkingLocal/odoo-workinglocal) |
 | WordPress | wordpress.workinglocal.be | [wordpress-workinglocal](https://github.com/WorkingLocal/wordpress-workinglocal) |
 | Urbackup | backup.workinglocal.be | [backup-workinglocal](https://github.com/WorkingLocal/backup-workinglocal) |
+| **Blog Convertor** | **:3456** (intern, geen domein) | deze repo (`apps/blog-convertor/`) |
 
 ## Repository structuur
 
 ```
 vps-workinglocal/
+├── apps/
+│   └── blog-convertor/
+│       ├── server.js               # Node.js webapplicatie (geen npm)
+│       ├── blog-convertor.service  # systemd unit file (service naam: blog-ui)
+│       └── install.sh              # Installatiescript
 ├── setup/
 │   ├── install-docker.sh           # Docker installeren
 │   ├── install-coolify.sh          # Coolify installeren
