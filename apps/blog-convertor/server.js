@@ -142,7 +142,13 @@ const server = http.createServer((req, res) => {
       const job = { id: ++jobCounter, url: data.source_url, submittedAt: new Date().toISOString(), execId: null, status: 'queued', durationSec: 0 };
       jobs.push(job);
 
-      const payload = JSON.stringify({ source_url: data.source_url });
+      const payload = JSON.stringify({
+        source_url:    data.source_url,
+        model:         data.model         || 'standaard',
+        image_backend: data.image_backend || 'local',
+        image_model:   data.image_model   || 'sdxl',
+        replicate_key: data.replicate_key || ''
+      });
       const proxyReq = http.request({
         hostname: N8N_HOST, port: N8N_PORT, path: N8N_PATH,
         method: 'POST',
