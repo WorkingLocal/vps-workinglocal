@@ -8,7 +8,8 @@ const N8N_PORT = 5678;
 const N8N_PATH = '/webhook/blogartikel';
 const WORKFLOW_ID = 'kTy9n74V2kWvLMMM';
 const DB_CONTAINER = 'n8n-db-qmj0e07xtzyzn0rhfwh32ux4';
-const LITELLM_URL = 'http://100.80.180.55:4000';
+const LITELLM_HOST = '100.80.180.55';
+const LITELLM_PORT = 4000;
 const LITELLM_KEY = 'HostingLocal2024';
 
 // In-memory job store: { id, url, submittedAt, execId, status, durationSec }
@@ -200,7 +201,7 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'GET' && req.url === '/api/models') {
     const options = {
-      hostname: '100.80.180.55', port: 4000, path: '/models', method: 'GET',
+      hostname: LITELLM_HOST, port: LITELLM_PORT, path: '/models', method: 'GET',
       headers: { 'Authorization': `Bearer ${LITELLM_KEY}` }
     };
     const proxyReq = http.request(options, (proxyRes) => {
@@ -618,7 +619,7 @@ async function loadModels(){
       tag.textContent=info.tag;
       const hint=document.getElementById('model-hint');
       const tijdStr=info.tijd?' Verwerking duurt doorgaans '+info.tijd+'.':'';
-      hint.textContent='Het artikel wordt opgehaald via Jina.ai, herschreven in het Nederlands door '+info.label+' en als concept opgeslagen in WordPress.'+tijdStr;
+      hint.textContent='Het artikel wordt opgehaald via Jina.ai, herschreven in het Nederlands door '+info.label+' en als concept opgeslagen in WordPress.'+tijdStr+' Je kan meerdere artikelen tegelijk indienen \u2014 ze worden parallel verwerkt.';
     };
     sel.addEventListener('change',updateTag);
     updateTag();
