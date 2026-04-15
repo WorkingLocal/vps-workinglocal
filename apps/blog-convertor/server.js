@@ -16,6 +16,9 @@ const LITELLM_KEY = 'HostingLocal2024';
 const jobs = [];
 let jobCounter = 0;
 
+// Descriptions store: execId (string) → [{ imageUrl, description }]
+const descriptionsStore = new Map();
+
 // Simple query via -c flag
 function dbQuery(sql) {
   return new Promise((resolve) => {
@@ -118,8 +121,12 @@ const server = http.createServer((req, res) => {
 
   // GET /api/status — return job list as JSON
   if (req.method === 'GET' && req.url === '/api/status') {
+    const out = jobs.slice().reverse().map(j => ({
+      ...j,
+      hasDescriptions: j.execId ? descriptionsStore.has(String(j.execId)) : false
+    }));
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(jobs.slice().reverse()));
+    res.end(JSON.stringify(out));
     return;
   }
 
@@ -146,6 +153,7 @@ const server = http.createServer((req, res) => {
       const payload = JSON.stringify({
         source_url:    data.source_url,
         model:         data.model         || 'standaard',
+        vision_model:  data.vision_model  || 'qwen2.5vl-7b',
         image_backend: data.image_backend || 'local',
         image_model:   data.image_model   || 'sdxl',
         replicate_key: data.replicate_key || ''
@@ -223,6 +231,45 @@ const server = http.createServer((req, res) => {
     });
     proxyReq.on('error', () => { res.writeHead(500); res.end('[]'); });
     proxyReq.end();
+    return;
+  }
+
+  // POST /api/descriptions — n8n callback met vision omschrijvingen
+  if (req.method === 'POST' && req.url === '/api/descriptions') {
+    let body = '';
+    req.on('data', d => body += d);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const execId = String(data.execId || '');
+        const descs = Array.isArray(data.descriptions) ? data.descriptions : [];
+        if (execId) descriptionsStore.set(execId, descs);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } catch {
+        res.writeHead(400); res.end('{}');
+      }
+    });
+    return;
+  }
+
+  // GET /api/descriptions/:execId — download omschrijvingen als JSON
+  if (req.method === 'GET' && req.url.startsWith('/api/descriptions/')) {
+    const execId = req.url.slice('/api/descriptions/'.length);
+    const descs = descriptionsStore.get(execId) || [];
+    const json = JSON.stringify({ execId, descriptions: descs }, null, 2);
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Content-Disposition': `attachment; filename="omschrijvingen-${execId}.json"`
+    });
+    res.end(json);
+    return;
+  }
+
+  // GET /api/vision-models — beschikbare vision modellen
+  if (req.method === 'GET' && req.url === '/api/vision-models') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(['qwen2.5vl-7b']));
     return;
   }
 
@@ -361,6 +408,10 @@ input.api-key-input{width:100%;padding:9px 14px;border:1.5px solid var(--border)
 input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,184,24,.18)}
 .section-divider{border:none;border-top:1.5px solid var(--border);margin:20px 0}
 
+/* ── Download knop ── */
+.desc-download{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:.78rem;color:var(--navy);text-decoration:none;padding:5px 12px;border:1.5px solid #c8d4e4;border-radius:7px;background:#eef2f8;font-weight:600;transition:background .15s}
+.desc-download:hover{background:#dde5f0;border-color:#a8b8d0}
+
 /* ── Resource bars (RAM + CPU) ── */
 .resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
 @media(max-width:640px){.resource-grid{grid-template-columns:1fr}}
@@ -398,9 +449,14 @@ input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(2
   <div class="card">
     <div class="card-title">Artikel insturen</div>
     <div class="model-row">
-      <span class="model-label">AI-model</span>
+      <span class="model-label">Tekst&#8209;model</span>
       <select id="model-select"><option value="standaard">Laden…</option></select>
       <span class="model-tag" id="model-tag"></span>
+    </div>
+    <div class="model-row">
+      <span class="model-label">Vision&#8209;model</span>
+      <select id="vision-model-select"><option value="qwen2.5vl-7b">Laden…</option></select>
+      <span class="model-tag" style="font-size:.72rem;color:var(--text-muted);background:#f0f4f8;padding:3px 8px;border-radius:5px">afbeeldingen omschrijven</span>
     </div>
     <label for="url-input">Bron-URL van het te herschrijven artikel</label>
     <div class="input-row">
@@ -475,7 +531,7 @@ input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(2
 </main>
 
 <script>
-const STAGES = ['Ophalen','AI-rewrite','WordPress'];
+const STAGES = ['Ophalen','AI-rewrite','Afbeeldingen','WordPress'];
 let lastUpdate = 0;
 
 function fmt(iso){
@@ -536,6 +592,9 @@ function renderJobs(jobs){
     else if(job.status==='running'&&stage===2){statusText='Concept opslaan in WordPress\u2026';statusCls='running';}
     else if(job.status==='done'){statusText='&#10003; Concept aangemaakt in WordPress'+dur;statusCls='done';}
     else if(job.status==='error'){statusText='&#10007; Fout bij verwerking'+dur;statusCls='error';}
+    const dlBtn = job.hasDescriptions && job.execId
+      ? '<a class="desc-download" href="/api/descriptions/'+job.execId+'" download>&#8659; Afbeeldingsomschrijvingen (JSON)</a>'
+      : '';
     return '<div class="job '+job.status+'">'
       +'<div class="job-header">'
       +'<span class="dot '+job.status+'"></span><span class="job-url" title="'+job.url+'">'+job.url+'</span>'
@@ -544,6 +603,7 @@ function renderJobs(jobs){
       +'<div class="stages">'+stageHtml+'</div>'
       +'<div class="progress-wrap"><div class="progress-bar '+barCls+'" style="width:'+pct+'%"></div></div>'
       +'<div class="job-status-text '+statusCls+'">'+statusText+'</div>'
+      +dlBtn
       +'</div>';
   }).join('');
 }
@@ -569,11 +629,12 @@ function submitUrl(){
   inner.innerHTML='<span class="spinner"></span> Doorsturen\u2026';
   showFlash('Artikel wordt doorgestuurd\u2026','');
   const model        = document.getElementById('model-select').value||'standaard';
+  const visionModel  = document.getElementById('vision-model-select').value||'qwen2.5vl-7b';
   const imageBackend = document.getElementById('img-backend-select').value||'local';
   const imageModel   = document.getElementById('img-model-select').value||'sdxl';
   const replicateKey = document.getElementById('replicate-key-input').value.trim();
   if(imageBackend==='replicate'&&!replicateKey){showFlash('Geef een Replicate API-key in.','err');return;}
-  fetch('/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_url:url,model:model,image_backend:imageBackend,image_model:imageModel,replicate_key:replicateKey})})
+  fetch('/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source_url:url,model:model,vision_model:visionModel,image_backend:imageBackend,image_model:imageModel,replicate_key:replicateKey})})
     .then(r=>r.json())
     .then(d=>{
       if(d.ok){
@@ -678,7 +739,18 @@ function onBackendChange(){
 }
 onBackendChange();
 
+async function loadVisionModels(){
+  try{
+    const models=await fetch('/api/vision-models').then(r=>r.json());
+    const sel=document.getElementById('vision-model-select');
+    if(models.length){
+      sel.innerHTML=models.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+    }
+  }catch(e){}
+}
+
 loadModels();
+loadVisionModels();
 pollSystem();
 setInterval(pollSystem, 30000);
 poll();
