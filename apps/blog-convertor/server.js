@@ -354,7 +354,8 @@ button#submit-btn:disabled{background:#c8c8c8;color:#888;cursor:not-allowed;tran
 .model-label{font-size:.86rem;font-weight:600;color:var(--text);white-space:nowrap}
 select#model-select{padding:9px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:.88rem;font-family:'DM Sans',sans-serif;color:var(--text);background:#fff;outline:none;cursor:pointer;transition:border-color .2s,box-shadow .2s;min-width:200px}
 select#model-select:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,184,24,.18)}
-.model-tag{font-size:.72rem;color:var(--text-muted);background:#f0f4f8;padding:3px 8px;border-radius:5px}
+.model-tag{font-size:.72rem;color:var(--text-muted);background:#f0f4f8;padding:3px 8px;border-radius:5px;display:inline-block}
+.model-tag.hidden{display:none}
 .wp-link{display:inline-flex;align-items:center;gap:6px;margin-top:16px;font-size:.81rem;color:var(--navy);text-decoration:none;padding:7px 14px;border:1.5px solid #c8d4e4;border-radius:8px;background:#eef2f8;transition:background .15s,border-color .15s;font-weight:600}
 .wp-link:hover{background:#dde5f0;border-color:#a8b8d0}
 
@@ -408,6 +409,10 @@ input.api-key-input{width:100%;padding:9px 14px;border:1.5px solid var(--border)
 input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(255,184,24,.18)}
 .section-divider{border:none;border-top:1.5px solid var(--border);margin:20px 0}
 
+/* ── Stap-labels ── */
+.phase-label{font-family:'Outfit',sans-serif;font-size:.72rem;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;padding:5px 10px;background:var(--yellow-light);border-left:3px solid var(--yellow);border-radius:0 6px 6px 0}
+.phase-hint{font-size:.72rem;font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;font-family:'DM Sans',sans-serif}
+
 /* ── Download knop ── */
 .desc-download{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:.78rem;color:var(--navy);text-decoration:none;padding:5px 12px;border:1.5px solid #c8d4e4;border-radius:7px;background:#eef2f8;font-weight:600;transition:background .15s}
 .desc-download:hover{background:#dde5f0;border-color:#a8b8d0}
@@ -448,16 +453,20 @@ input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(2
 <main>
   <div class="card">
     <div class="card-title">Artikel insturen</div>
-    <div class="model-row">
-      <span class="model-label">Tekst&#8209;model</span>
-      <select id="model-select"><option value="standaard">Laden…</option></select>
-      <span class="model-tag" id="model-tag"></span>
+
+    <div class="phase-label">Stap 1 — Tekst herschrijven &amp; afbeeldingen omschrijven</div>
+    <div class="settings-grid" style="margin-bottom:12px">
+      <div>
+        <label class="settings-label" for="model-select">Tekst&#8209;model <span class="phase-hint">(artikel herschrijven)</span></label>
+        <select id="model-select" class="settings-select"><option value="standaard">Laden…</option></select>
+        <div class="model-tag" id="model-tag" style="margin-top:5px"></div>
+      </div>
+      <div>
+        <label class="settings-label" for="vision-model-select">Vision&#8209;model <span class="phase-hint">(foto&#8217;s lezen &amp; omschrijven)</span></label>
+        <select id="vision-model-select" class="settings-select"><option value="qwen2.5vl-7b">Laden…</option></select>
+      </div>
     </div>
-    <div class="model-row">
-      <span class="model-label">Vision&#8209;model</span>
-      <select id="vision-model-select"><option value="qwen2.5vl-7b">Laden…</option></select>
-      <span class="model-tag" style="font-size:.72rem;color:var(--text-muted);background:#f0f4f8;padding:3px 8px;border-radius:5px">afbeeldingen omschrijven</span>
-    </div>
+
     <label for="url-input">Bron-URL van het te herschrijven artikel</label>
     <div class="input-row">
       <input type="url" id="url-input" placeholder="https://voorbeeld.com/blogartikel" autocomplete="off"/>
@@ -469,20 +478,21 @@ input.api-key-input:focus{border-color:var(--yellow);box-shadow:0 0 0 3px rgba(2
 
     <hr class="section-divider">
 
+    <div class="phase-label">Stap 2 — Nieuwe afbeeldingen genereren</div>
     <div class="settings-grid">
       <div>
-        <label class="settings-label" for="img-backend-select">Afbeeldingen genereren via</label>
+        <label class="settings-label" for="img-backend-select">Via <span class="phase-hint">(renderplatform)</span></label>
         <select id="img-backend-select" class="settings-select" onchange="onBackendChange()">
-          <option value="local">Lokaal (CPU — traag)</option>
-          <option value="replicate">Replicate API (snel)</option>
+          <option value="local">Lokaal — Stable Diffusion (CPU)</option>
+          <option value="replicate">Replicate API (cloud, snel)</option>
         </select>
       </div>
       <div>
-        <label class="settings-label" for="img-model-select">Beeldgeneratie model</label>
+        <label class="settings-label" for="img-model-select">Generatiemodel <span class="phase-hint">(diffusiemodel)</span></label>
         <select id="img-model-select" class="settings-select">
-          <option value="sdxl">Stable Diffusion XL (lokaal)</option>
-          <option value="sdxl-turbo">SDXL Turbo — sneller (lokaal)</option>
-          <option value="sd15">Stable Diffusion 1.5 — kleinste (lokaal)</option>
+          <option value="sdxl">Stable Diffusion XL</option>
+          <option value="sdxl-turbo">SDXL Turbo — sneller</option>
+          <option value="sd15">Stable Diffusion 1.5 — kleinste</option>
           <option value="flux-schnell" class="replicate-only">Flux.1 Schnell (Replicate)</option>
           <option value="flux-dev" class="replicate-only">Flux.1 Dev (Replicate)</option>
         </select>
@@ -678,6 +688,7 @@ async function loadModels(){
       const key=Object.keys(MODEL_INFO).find(k=>v.includes(k))||null;
       const info=key?MODEL_INFO[key]:{tag:'',tijd:null,label:v};
       tag.textContent=info.tag;
+      tag.className='model-tag'+(info.tag?'':' hidden');
       const hint=document.getElementById('model-hint');
       const tijdStr=info.tijd?' Verwerking duurt doorgaans '+info.tijd+'.':'';
       hint.textContent='Het artikel wordt opgehaald via Jina.ai, herschreven in het Nederlands door '+info.label+' en als concept opgeslagen in WordPress.'+tijdStr+' Je kan meerdere artikelen tegelijk indienen \u2014 ze worden parallel verwerkt.';
