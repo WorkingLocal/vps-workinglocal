@@ -289,11 +289,108 @@ ufw status verbose
 
 ## Problemen oplossen
 
+### Services niet bereikbaar van buitenaf (maar containers draaien wel)
+
+**Symptoom:** `curl https://<service>.<domein>` time-out, SSH werkt nog wel.
+
+**Oorzaak:** De DOCKER-USER iptables chain blokkeert extern verkeer naar Docker-containers.
+Dit treedt op als UFW verwijderd of gereset werd terwijl `iptables-persistent` de DROP-regels
+bleef laden met een lege `ufw-user-forward` chain.
+
+**Diagnose:**
+```bash
+# Controleer of pakketjes worden gedropped naar Docker-interne IPs
+iptables -L DOCKER-USER -n -v | grep DROP
+# Als pkts > 0 bij de DROP regels voor 10.0.0.0/8 → dit is het probleem
+
+# Controleer ufw-user-forward chain
+iptables -L ufw-user-forward -n -v
+# Moet ACCEPT regels hebben voor poort 80/443
+```
+
+**Fix:**
+```bash
+# Poorten 80/443/9505 direct accepteren in ufw-user-forward
+iptables -I ufw-user-forward 1 -p tcp --dport 443 -j ACCEPT
+iptables -I ufw-user-forward 1 -p udp --dport 443 -j ACCEPT
+iptables -I ufw-user-forward 1 -p tcp --dport 80 -j ACCEPT
+iptables -I ufw-user-forward 1 -p tcp --dport 9505 -j ACCEPT
+# Persistent opslaan
+iptables-save > /etc/iptables/rules.v4
+```
+
+**Permanente fix (als UFW beschikbaar):**
+```bash
+apt-get install -y ufw
+bash setup/configure-firewall.sh   # includeert ufw route allow
+bash setup/harden-server.sh        # herlaadt DOCKER-USER met directe ACCEPT regels
+```
+
+> **Opmerking:** Zowel `configure-firewall.sh` als `harden-server.sh` zijn nu bijgewerkt
+> zodat dit bij een nieuwe installatie niet meer voorkomt. `harden-server.sh` bakt de
+> ACCEPT regels direct in DOCKER-USER (niet via UFW), zodat ze ook overleven als UFW
+> later verwijderd wordt.
+
 ### SSL certificaat niet aangevraagd
 
 DNS was nog niet gepropageerd toen Traefik het certificaat probeerde aan te vragen:
 ```bash
 bash setup/reset-acme.sh
+```
+
+### SSL certificaat Traefik ACME time-out (specifieke service)
+
+**Symptoom:** Traefik logs tonen herhaalde `Timeout during connect` voor één service,
+andere services krijgen wél een cert.
+
+**Oorzaak:** Traefik's ingebouwde ACME HTTP-01 challenge werkt niet voor die service
+(bekende intermittente bug). Certbot standalone werkt wél.
+
+**Fix:**
+```bash
+docker stop coolify-proxy
+certbot certonly --standalone --non-interactive --agree-tos \
+    -m <email> -d <subdomein>.<domein>
+docker start coolify-proxy
+
+# Cert beschikbaar maken voor Traefik via file provider
+mkdir -p /data/coolify/proxy/certs/<subdomein>.<domein>
+cp /etc/letsencrypt/live/<subdomein>.<domein>/fullchain.pem /data/coolify/proxy/certs/<subdomein>.<domein>/
+cp /etc/letsencrypt/live/<subdomein>.<domein>/privkey.pem /data/coolify/proxy/certs/<subdomein>.<domein>/
+chmod 600 /data/coolify/proxy/certs/<subdomein>.<domein>/privkey.pem
+
+cat > /data/coolify/proxy/dynamic/<subdomein>-cert.yaml << EOF
+tls:
+  certificates:
+    - certFile: /traefik/certs/<subdomein>.<domein>/fullchain.pem
+      keyFile: /traefik/certs/<subdomein>.<domein>/privkey.pem
+EOF
+```
+
+Certbot renewal hooks instellen zodat het cert automatisch verlengd wordt:
+```bash
+# /etc/letsencrypt/renewal-hooks/pre/stop-traefik.sh
+echo '#!/bin/bash
+docker stop coolify-proxy && sleep 2' > /etc/letsencrypt/renewal-hooks/pre/stop-traefik.sh
+
+# /etc/letsencrypt/renewal-hooks/post/start-traefik.sh
+echo '#!/bin/bash
+docker start coolify-proxy' > /etc/letsencrypt/renewal-hooks/post/start-traefik.sh
+
+# /etc/letsencrypt/renewal-hooks/deploy/copy-cert.sh
+cat > /etc/letsencrypt/renewal-hooks/deploy/copy-cert.sh << 'HOOK'
+#!/bin/bash
+SUBDOMAIN=$(basename "$RENEWED_LINEAGE")
+if [ -d "/data/coolify/proxy/certs/$SUBDOMAIN" ]; then
+    cp "$RENEWED_LINEAGE/fullchain.pem" "/data/coolify/proxy/certs/$SUBDOMAIN/"
+    cp "$RENEWED_LINEAGE/privkey.pem" "/data/coolify/proxy/certs/$SUBDOMAIN/"
+    chmod 600 "/data/coolify/proxy/certs/$SUBDOMAIN/privkey.pem"
+fi
+HOOK
+
+chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-traefik.sh
+chmod +x /etc/letsencrypt/renewal-hooks/post/start-traefik.sh
+chmod +x /etc/letsencrypt/renewal-hooks/deploy/copy-cert.sh
 ```
 
 ### Containers hebben geen internettoegang
@@ -326,7 +423,7 @@ Herstart de `odoo-addons` container via Coolify — de laatste log moet `Addons 
 
 Controleer dat `signage.<DOMEIN>` zonder Cloudflare proxy staat en poort 9505 open is:
 ```bash
-ufw status | grep 9505
+iptables -L ufw-user-forward -n | grep 9505
 ```
 
 ---

@@ -70,14 +70,25 @@ cat >> /etc/ufw/after.rules << 'EOF'
 *filter
 :ufw-user-forward - [0:0]
 :DOCKER-USER - [0:0]
+# Intern Docker-verkeer altijd doorlaten
 -A DOCKER-USER -j RETURN -s 10.0.0.0/8
 -A DOCKER-USER -j RETURN -s 172.16.0.0/12
 -A DOCKER-USER -j RETURN -s 192.168.0.0/16
 
 -A DOCKER-USER -p udp -m udp --sport 53 --dport 1024:65535 -j RETURN
 
+# Publiek toegankelijke poorten — direct in DOCKER-USER zodat dit ook werkt
+# als UFW later verwijderd wordt (iptables-persistent laadt deze regels dan nog).
+# ufw-user-forward wordt gevuld door `ufw route allow` in configure-firewall.sh
+# en biedt een extra laag, maar is niet de enige beveiliging.
+-A DOCKER-USER -p tcp --dport 80 -j ACCEPT
+-A DOCKER-USER -p tcp --dport 443 -j ACCEPT
+-A DOCKER-USER -p udp --dport 443 -j ACCEPT
+-A DOCKER-USER -p tcp --dport 9505 -j ACCEPT
+
 -A DOCKER-USER -j ufw-user-forward
 
+# Blokkeer directe externe toegang tot Docker-interne netwerken
 -A DOCKER-USER -j DROP -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -d 192.168.0.0/16
 -A DOCKER-USER -j DROP -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -d 10.0.0.0/8
 -A DOCKER-USER -j DROP -p tcp -m tcp --tcp-flags FIN,SYN,RST,ACK SYN -d 172.16.0.0/12
@@ -87,7 +98,7 @@ COMMIT
 EOF
 
 ufw reload
-log "UFW DOCKER-USER chain geconfigureerd"
+log "UFW DOCKER-USER chain geconfigureerd (incl. directe ACCEPT voor poorten 80/443/9505)"
 
 # ── 5. iptables-persistent installeren ────────────────────────────────────────
 echo "→ iptables-persistent installeren..."
