@@ -210,7 +210,7 @@ const server = http.createServer((req, res) => {
       proxyRes.on('end', () => {
         try {
           const data = JSON.parse(body);
-          const ALIASES = ['standaard'];
+          const ALIASES = ['standaard', 'qwen2-vl-7b', 'qwen2.5vl-7b'];
           const models = (data.data || [])
             .map(m => m.id)
             .filter(id => !ALIASES.includes(id));
